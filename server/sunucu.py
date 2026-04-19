@@ -4,15 +4,19 @@ import sqlite3
 from datetime import datetime
 import json
 import threading
+import os
 from collections import defaultdict, deque
 import joblib
-import os
 import numpy as np
 from features import extract_features
 
 app = Flask(__name__)
 sock = Sock(app)
-DB_PATH = "sensor_data.db"
+
+BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR   = os.path.abspath(os.path.join(BASE_DIR, ".."))
+DB_PATH    = os.path.join(ROOT_DIR, "sensor_data.db")
+MODEL_PATH = os.path.join(ROOT_DIR, "ml", "model.pkl")
 
 clients = set()
 clients_lock = threading.Lock()
@@ -21,8 +25,8 @@ WINDOW_SIZE = 64
 windows = defaultdict(lambda: deque(maxlen=WINDOW_SIZE))
 
 model = None
-if os.path.exists("model.pkl"):
-    model = joblib.load("model.pkl")
+if os.path.exists(MODEL_PATH):
+    model = joblib.load(MODEL_PATH)
     print("[MODEL] model.pkl yuklendi")
 
 def init_db():
@@ -176,7 +180,8 @@ def websocket(ws):
 
 @app.route("/")
 def dashboard():
-    return render_template_string(open("dashboard.html").read())
+    dashboard_path = os.path.join(BASE_DIR, "dashboard.html")
+    return render_template_string(open(dashboard_path).read())
 
 if __name__ == "__main__":
     init_db()
