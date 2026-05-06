@@ -1,4 +1,17 @@
+# Python
 __pycache__/
 *.pyc
 *.db
+
+# Archives
 *.zip
+
+# Node (report generation)
+node_modules/
+package.json
+package-lock.json
+make_report.js
+
+# Generated files
+*.pkl
+*.docx
