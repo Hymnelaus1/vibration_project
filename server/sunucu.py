@@ -39,7 +39,6 @@ def init_db():
             raw             INTEGER NOT NULL,
             voltage         REAL    NOT NULL,
             timestamp       TEXT    NOT NULL,
-            temp_c          REAL,
             rms             REAL,
             peak_to_peak    REAL,
             kurtosis        REAL,
@@ -49,13 +48,6 @@ def init_db():
             is_anomaly      INTEGER DEFAULT 0
         )
     """)
-    # Migrate existing DB — add temp_c if not present
-    try:
-        cursor.execute("ALTER TABLE readings ADD COLUMN temp_c REAL")
-        conn.commit()
-        print("[DB] temp_c column added")
-    except Exception:
-        pass  # column already exists
     conn.commit()
     conn.close()
 
@@ -64,7 +56,7 @@ def get_last_readings(limit=60):
     cursor = conn.cursor()
     cursor.execute("""
         SELECT sensor_id, raw, voltage, timestamp,
-               anomaly_score, is_anomaly, temp_c
+               anomaly_score, is_anomaly
         FROM readings ORDER BY timestamp DESC LIMIT ?
     """, (limit,))
     rows = cursor.fetchall()
@@ -89,7 +81,6 @@ def receive_data():
     sensor_id = data.get("sensor_id", "sensor_1")
     raw       = data["raw"]
     voltage   = data["voltage"]
-    temp_c    = data.get("temp_c", None)   # optional — backwards compatible
     ts        = datetime.now().isoformat()
 
     windows[sensor_id].append(voltage)
@@ -116,12 +107,12 @@ def receive_data():
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO readings
-        (sensor_id, raw, voltage, timestamp, temp_c,
+        (sensor_id, raw, voltage, timestamp,
          rms, peak_to_peak, kurtosis, crest_factor,
          fft_energy, anomaly_score, is_anomaly)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
     """, (
-        sensor_id, raw, voltage, ts, temp_c,
+        sensor_id, raw, voltage, ts,
         features["rms"]          if features else None,
         features["peak_to_peak"] if features else None,
         features["kurtosis"]     if features else None,
@@ -137,15 +128,13 @@ def receive_data():
         "sensor_id": sensor_id,
         "raw":       raw,
         "voltage":   round(voltage, 3),
-        "temp_c":    round(temp_c, 1) if temp_c is not None else None,
         "timestamp": ts,
         "anomaly":   anomaly,
         "score":     round(score, 4) if score is not None else None,
         "features":  features
     })
 
-    temp_str = f" T={temp_c:.1f}°C" if temp_c is not None else ""
-    print(f"[{ts[11:19]}] {sensor_id} V={voltage:.3f}{temp_str} {'ANOMALI!' if anomaly else 'OK'}")
+    print(f"[{ts[11:19]}] {sensor_id} V={voltage:.3f} {'ANOMALI!' if anomaly else 'OK'}")
     return jsonify({"status": "ok", "anomaly": anomaly}), 200
 
 @app.route("/readings", methods=["GET"])
@@ -158,8 +147,7 @@ def get_readings():
             "voltage":       r[2],
             "timestamp":     r[3],
             "anomaly_score": r[4],
-            "is_anomaly":    r[5],
-            "temp_c":        r[6]
+            "is_anomaly":    r[5]
         }
         for r in rows
     ]
@@ -176,8 +164,7 @@ def websocket(ws):
             "raw":       r[1],
             "voltage":   round(r[2], 3),
             "timestamp": r[3],
-            "anomaly":   r[5] if r[5] else 0,
-            "temp_c":    round(r[6], 1) if r[6] is not None else None
+            "anomaly":   r[5] if r[5] else 0
         }
         for r in rows
     ]
