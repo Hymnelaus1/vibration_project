@@ -152,8 +152,9 @@
     letter-spacing: 1px;
   }
 
-  .stat-card.raw .stat-value  { color: var(--accent2); }
+  .stat-card.raw .stat-value   { color: var(--accent2); }
   .stat-card.count .stat-value { color: #a78bfa; }
+  .stat-card.temp .stat-value  { color: #f9a825; }
 
   /* Chart panel */
   .chart-panel {
@@ -306,6 +307,13 @@
       <div class="stat-label">Active Sensor</div>
       <div class="stat-value" style="font-size:1.4rem" id="valSensor">—</div>
       <div class="stat-unit">ID</div>
+    </div>
+    <div class="stat-card temp" id="cardTemp">
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+      <div class="stat-label">Temperature</div>
+      <div class="stat-value" id="valTemp">—</div>
+      <div class="stat-unit">°C · LM35</div>
     </div>
   </div>
 
@@ -467,6 +475,10 @@ function updateStats(r) {
   document.getElementById('valRaw').textContent = r.raw;
   document.getElementById('valSensor').textContent = r.sensor_id;
   document.getElementById('valCount').textContent = ++totalCount;
+  if (r.temp_c !== null && r.temp_c !== undefined) {
+    document.getElementById('valTemp').textContent = r.temp_c.toFixed(1);
+    flash('cardTemp');
+  }
   flash('cardVoltage'); flash('cardRaw'); flash('cardCount');
 }
 
