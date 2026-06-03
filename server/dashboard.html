@@ -307,6 +307,13 @@
       <div class="stat-value" style="font-size:1.4rem" id="valSensor">—</div>
       <div class="stat-unit">ID</div>
     </div>
+    <div class="stat-card" id="cardMotion">
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+      <div class="stat-label">Motion — PIR</div>
+      <div class="stat-value" style="font-size:1.4rem" id="valMotion">—</div>
+      <div class="stat-unit">EXTI INTERRUPT</div>
+    </div>
   </div>
 
   <!-- Chart -->
@@ -467,6 +474,12 @@ function updateStats(r) {
   document.getElementById('valRaw').textContent = r.raw;
   document.getElementById('valSensor').textContent = r.sensor_id;
   document.getElementById('valCount').textContent = ++totalCount;
+  if (r.motion !== undefined) {
+    const el = document.getElementById('valMotion');
+    el.textContent = r.motion ? 'DETECTED' : 'CLEAR';
+    el.style.color = r.motion ? '#ff6b35' : '#39ff14';
+    if (r.motion) flash('cardMotion');
+  }
   flash('cardVoltage'); flash('cardRaw'); flash('cardCount');
 }
 

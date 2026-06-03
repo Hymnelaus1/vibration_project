@@ -39,6 +39,7 @@ def init_db():
             raw             INTEGER NOT NULL,
             voltage         REAL    NOT NULL,
             timestamp       TEXT    NOT NULL,
+            motion          INTEGER DEFAULT 0,
             rms             REAL,
             peak_to_peak    REAL,
             kurtosis        REAL,
@@ -81,6 +82,7 @@ def receive_data():
     sensor_id = data.get("sensor_id", "sensor_1")
     raw       = data["raw"]
     voltage   = data["voltage"]
+    motion    = data.get("motion", 0)
     ts        = datetime.now().isoformat()
 
     windows[sensor_id].append(voltage)
@@ -107,12 +109,12 @@ def receive_data():
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO readings
-        (sensor_id, raw, voltage, timestamp,
+        (sensor_id, raw, voltage, timestamp, motion,
          rms, peak_to_peak, kurtosis, crest_factor,
          fft_energy, anomaly_score, is_anomaly)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
     """, (
-        sensor_id, raw, voltage, ts,
+        sensor_id, raw, voltage, ts, motion,
         features["rms"]          if features else None,
         features["peak_to_peak"] if features else None,
         features["kurtosis"]     if features else None,
@@ -128,13 +130,15 @@ def receive_data():
         "sensor_id": sensor_id,
         "raw":       raw,
         "voltage":   round(voltage, 3),
+        "motion":    motion,
         "timestamp": ts,
         "anomaly":   anomaly,
         "score":     round(score, 4) if score is not None else None,
         "features":  features
     })
 
-    print(f"[{ts[11:19]}] {sensor_id} V={voltage:.3f} {'ANOMALI!' if anomaly else 'OK'}")
+    motion_str = " HAREKET!" if motion else ""
+    print(f"[{ts[11:19]}] {sensor_id} V={voltage:.3f}{motion_str} {'ANOMALI!' if anomaly else 'OK'}")
     return jsonify({"status": "ok", "anomaly": anomaly}), 200
 
 @app.route("/readings", methods=["GET"])
